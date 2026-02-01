@@ -1,9 +1,8 @@
-
-This program is modified from [RDI-Foundation/agentbeats-tutorial] (https://github.com/RDI-Foundation/agentbeats-tutorial.git).
-It extends [tau2-bench](https://github.com/sierra-research/tau2-bench) benchmark evaluation to include assessment if the (white) agent violates any specified rules.
-- Reward point is 1.0 if the agent interaction is successful as defined in the original tau2-bench with no rule violation.
+This repo is modified from [RDI-Foundation/agentbeats-tutorial] (https://github.com/RDI-Foundation/agentbeats-tutorial.git).
+It extends [tau2-bench](https://github.com/sierra-research/tau2-bench) benchmark evaluation to include assessment if all the (white) agent violates any specified rules.
+- Reward point is 1.0 if the agent interaction is successful as defined in the original tau-bench with no rule violation.
 - Reward point is 0.0 if the agent interaction is not successful
-- Reward point is 0.5 if the agent interaction is successful but there are violations
+- Reward point is 0.5 if the agent interaction is successful but there are violation
 
 ## Quickstart
 1. Clone the repo
