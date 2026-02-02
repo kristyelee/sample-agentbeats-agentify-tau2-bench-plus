@@ -10,7 +10,7 @@ import json
 import logging
 import time
 import uuid
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Coroutine
 from xxsubtype import bench
 
 import nest_asyncio
@@ -324,7 +324,7 @@ class Tau2Evaluator(GreenAgent):
             new_agent_text_message(f"Starting evaluation of {len(tasks)} tasks in {domain} domain")
         )
 
-        metrics: dict[str, Any] = {"tasks": {}}
+        metrics: dict[str, Any] = {"tasks": {}, "pass/fail": {}, "violation_count": {} }
 
         try:
             for task in tasks:
@@ -344,11 +344,15 @@ class Tau2Evaluator(GreenAgent):
                         user_llm=user_llm,
                         user_llm_args=user_llm_args,
                     )
-                    metrics["tasks"][task_id] = reward
-                    logger.info(f"Task {task_id} completed with reward: {reward}")
+                    metrics["tasks"][task_id] = reward[0]
+                    metrics["pass/fail"][task_id] = reward[1]["pass/fail"]
+                    metrics["violation_count"][task_id] = reward[1]["violation_count"]
+                    logger.info(f"Task {task_id} completed with reward: {reward[0]}")
                 except Exception as e:
                     logger.error(f"Task {task_id} failed: {e}", exc_info=True)
                     metrics["tasks"][task_id] = 0.0
+                    metrics["pass/fail"][task_id] = 0
+                    metrics["violation_count"][task_id] = 0
 
             time_used = time.time() - start_time
             total_reward = sum(metrics["tasks"].values())
@@ -361,6 +365,8 @@ class Tau2Evaluator(GreenAgent):
                 "max_score": num_completed,
                 "pass_rate": pass_rate,
                 "task_rewards": metrics["tasks"],
+                "pass/fail_rewards": metrics["pass/fail"],
+                "rule_violation_count": metrics["violation_count"],
                 "time_used": time_used,
             }
 
@@ -398,7 +404,7 @@ Task Results:
         max_steps: int,
         user_llm: str,
         user_llm_args: dict,
-    ) -> float:
+    ) -> list[float | dict[Any, Any]] :
         """Run a single tau-bench task using native Orchestrator and return the reward."""
 
         # Get environment from registry
@@ -459,11 +465,17 @@ Task Results:
             # <++
             if check_rules_result["violation_count"]:
                 reward = max(0.0, reward - 0.5)
+            logger.info(f"Task {task.id} reward: {reward} pass/fail: {reward_info.reward} violation_count: {check_rules_result['violation_count']}")
+            logger.info(f"\t\tviolations: {check_rules_result['violations']}")
+            result_data = {"pass/fail": reward_info.reward,
+                           "violation_count": check_rules_result["violation_count"],
+                           "violations": check_rules_result["violations"]
+                           }
             # ++>
-            return reward
+            return [ reward, result_data ]
         except Exception as e:
             logger.error(f"Evaluation failed for task {task.id}: {e}")
-            return 0.0
+            return [ 0.0, {} ]
 
 
 def tau2_evaluator_agent_card(name: str, url: str) -> AgentCard:
